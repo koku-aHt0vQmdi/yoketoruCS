@@ -90,7 +90,12 @@ namespace yoketoruCS
 
         void ChangeState()
         {
-            switch (nextState)
+            if (nextState == State.None) return;
+
+            currentState = nextState;
+            nextState = State.None;
+
+            switch (currentState)
             {
                 case State.Title:
                     labelTitle.Visible = true;
