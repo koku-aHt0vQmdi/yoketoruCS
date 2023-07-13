@@ -1,4 +1,4 @@
-using Microsoft.VisualBasic.ApplicationServices;
+ï»¿using Microsoft.VisualBasic.ApplicationServices;
 using System.Data;
 using System.Runtime.InteropServices;
 
@@ -9,9 +9,13 @@ namespace yoketoruCS
         [DllImport("user32.dll")]
         public static extern short GetAsyncKeyState(int vKey);
 
+        int ScoreMax => 99999;
+        static int SpeedMax => 10;
+        static int PointRate => 100;
+
         static int PlayerMax => 1;
-        static int ItemMax => 3;
-        static int ObstacleMax => 3;
+        static int ItemMax => 8;
+        static int ObstacleMax => 8;
         static int PlayerIndex => 0;
         static int ObstacleIndex => PlayerIndex + PlayerMax;
         static int ItemIndex => ObstacleIndex + ObstacleMax;
@@ -24,14 +28,23 @@ namespace yoketoruCS
 
         static Random random = new Random();
 
-        static int SpeedMax => 10;
-        static int PointRate => 100;
+        //åˆ—æŒ™å­enum
+        enum State
+        {
+            None = -1,
+            Title,
+            Game,
+            Gameover,
+            Clear
+        }
+
+        State nextState = State.Title;
+        State currentState = State.None;
 
         int score;
-        int ScoreMax => 99999;
-        int highScore = 100;
         int timer;
-        static int StateTimer => 200;
+        int highScore = 100;
+        int StateTimer => 200;
 
         public Form1()
         {
@@ -45,34 +58,29 @@ namespace yoketoruCS
                 Controls.Add(chrLabels[i]);
                 if (i < ObstacleIndex)
                 {
-                    chrLabels[i].Text = "(EƒÖE)";
+                    chrLabels[i].Text = "(ãƒ»Ï‰ãƒ»)"/*tempPlayer.Text*/;
+                    //chrLabels[i].Font = tempPlayer.Font;
+                    //chrLabels[i].ForeColor = tempPlayer.ForeColor;
                 }
                 else if (i < ItemIndex)
                 {
-                    chrLabels[i].Text = "Ÿ";
+                    chrLabels[i].Text = "ðŸ’£"/*tempObstacle.Text*/;
+                    //chrLabels[i].Font = tempObstacle.Font;
+                    //chrLabels[i].ForeColor = tempObstacle.ForeColor;
                 }
                 else
                 {
-                    chrLabels[i].Text = "š";
+                    chrLabels[i].Text = "â˜…"/*tempItem.Text*/;
+                    //chrLabels[i].Font = tempItem.Font;
+                    //chrLabels[i].ForeColor = tempItem.ForeColor;
                 }
             }
         }
 
         private void Form1_Load(object sender, EventArgs e)
         {
-        }
 
-        enum State
-        {
-            None = -1,
-            Title,
-            Game,
-            Gameover,
-            GameClear
         }
-
-        State nextState = State.Title;
-        State currentState = State.None;
 
         private void timer1_Tick(object sender, EventArgs e)
         {
@@ -85,15 +93,15 @@ namespace yoketoruCS
             switch (nextState)
             {
                 case State.Title:
-                    labelGameover.Visible = false;
-                    labelClear.Visible = false;
-                    buttonTitle.Visible = false;
                     labelTitle.Visible = true;
                     labelTitle.Left = (ClientSize.Width / 2) - (labelTitle.Width / 2);
                     labelTitle.Top = (ClientSize.Height / 3) - (labelTitle.Height / 2);
                     buttonState.Visible = true;
                     buttonState.Left = (ClientSize.Width / 2) - (buttonState.Width / 2);
                     buttonState.Top = ((ClientSize.Height / 3) - (buttonState.Height / 2)) + (ClientSize.Height / 3);
+                    labelGameover.Visible = false;
+                    buttonTitle.Visible = false;
+                    labelClear.Visible = false;
                     break;
 
                 case State.Game:
@@ -104,6 +112,7 @@ namespace yoketoruCS
                     labelTimer.Left = ClientSize.Width - (labelTimer.Width + 10);
                     labelTimer.Top = ClientSize.Height - (labelTimer.Height + 10);
                     score = 0;
+                    itemCount = ItemMax;
                     timer = StateTimer;
                     for (int i = ObstacleIndex; i < vx.Length; i++)
                     {
@@ -122,7 +131,7 @@ namespace yoketoruCS
                     buttonTitle.Top = ((ClientSize.Height / 3) - (buttonTitle.Height / 2)) + (ClientSize.Height / 3);
                     break;
 
-                case State.GameClear:
+                case State.Clear:
                     labelClear.Visible = true;
                     labelClear.Left = (ClientSize.Width / 2) - (labelClear.Width / 2);
                     labelClear.Top = (ClientSize.Height / 3) - (labelClear.Height / 2);
@@ -134,20 +143,12 @@ namespace yoketoruCS
             }
         }
 
-        private void buttonState_Click(object sender, EventArgs e)
-        {
-            nextState = State.Game;
-        }
-
         void UpdateState()
         {
             switch (currentState)
             {
                 case State.Game:
                     UpdateGame();
-                    break;
-
-                case 0:
                     break;
             }
         }
@@ -158,9 +159,24 @@ namespace yoketoruCS
             {
                 nextState = State.Gameover;
             }
+            if (GetAsyncKeyState((int)Keys.C) < 0)
+            {
+                nextState = State.Clear;
+            }
+
             UpdatePlayer();
             UpdateObstacleAndItem();
             UpdateTimer();
+        }
+
+        private void buttonState_Click(object sender, EventArgs e)
+        {
+            nextState = State.Game;
+        }
+
+        private void buttonTitle_Click(object sender, EventArgs e)
+        {
+            nextState = State.Title;
         }
 
         void UpdatePlayer()
@@ -195,18 +211,24 @@ namespace yoketoruCS
                     vy[i] = -Math.Abs(vy[i]);
                 }
 
-                //“–‚½‚è”»’è
+                //å½“ãŸã‚Šåˆ¤å®š
                 if (IsHit(chrLabels[i]))
                 {
                     if (IsObstacle(i))
                     {
-                        //áŠQ•¨‚É‚Ô‚Â‚©‚Á‚½
+                        //éšœå®³ç‰©ã«ã¶ã¤ã‹ã£ãŸ
                         nextState = State.Gameover;
                     }
                     else
                     {
-                        //TODO ƒAƒCƒeƒ€
+                        //ã‚¢ã‚¤ãƒ†ãƒ 
                         AddScore(timer * PointRate);
+                        itemCount--;
+                        chrLabels[i].Visible = false;
+                        if (itemCount <= 0)
+                        {
+                            nextState = State.Clear;
+                        }
                     }
                 }
             }
@@ -229,6 +251,7 @@ namespace yoketoruCS
                 timer = 0;
                 nextState = State.Gameover;
             }
+
             labelTimer.Text = $"{timer:000}";
         }
 
@@ -246,7 +269,7 @@ namespace yoketoruCS
 
         void AddScore(int point)
         {
-            //TODO “¾“_‰ÁŽZ
+            //å¾—ç‚¹åŠ ç®—
             score = Math.Min(score + point, ScoreMax);
 
             UpdateScore();
@@ -255,11 +278,6 @@ namespace yoketoruCS
         void UpdateScore()
         {
             labelScore.Text = $"{score:00000}";
-        }
-
-        private void buttonTitle_Click(object sender, EventArgs e)
-        {
-            nextState = State.Title;
         }
     }
 }
